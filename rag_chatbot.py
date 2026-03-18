@@ -61,6 +61,15 @@ class RAGChatbot:
         except Exception as e:
             print(f"Collection check: {e}")
 
+    def clear_documents(self):
+        """Clear all documents from the collection"""
+        try:
+            self.qdrant_client.delete_collection(collection_name=COLLECTION_NAME)
+            self._ensure_collection()
+            print(f"[OK] Cleared all documents")
+        except Exception as e:
+            print(f"[ERROR] Failed to clear documents: {e}")
+
     def embed_text(self, texts: List[str]) -> List[List[float]]:
         """Generate embeddings using Cohere"""
         response = self.cohere_client.embed(
@@ -72,6 +81,10 @@ class RAGChatbot:
 
     def ingest_document(self, text: str, metadata: Dict = None):
         """Ingest a document into the vector database"""
+        # Clear old documents first
+        print("[INFO] Clearing old documents...")
+        self.clear_documents()
+
         # Split text into chunks (simple chunking)
         chunks = self._chunk_text(text, chunk_size=1000, overlap=200)
 
