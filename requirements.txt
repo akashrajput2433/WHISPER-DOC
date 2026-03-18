@@ -1,4 +1,4 @@
-qdrant-client==1.7.0
+qdrant-client==1.17.1
 cohere==4.37
 requests==2.31.0
 flask==3.0.0
