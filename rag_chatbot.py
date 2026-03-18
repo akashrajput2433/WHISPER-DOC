@@ -122,11 +122,11 @@ class RAGChatbot:
         query_embedding = self.embed_text([query])[0]
 
         # Search in Qdrant
-        results = self.qdrant_client.search(
+        results = self.qdrant_client.query_points(
             collection_name=COLLECTION_NAME,
-            query_vector=query_embedding,
+            query=query_embedding,
             limit=top_k
-        )
+        ).points
 
         return [
             {
