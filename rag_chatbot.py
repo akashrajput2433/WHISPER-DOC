@@ -22,15 +22,28 @@ EMBEDDING_SIZE = 1024  # Cohere embed-english-v3.0
 
 class RAGChatbot:
     def __init__(self):
-        # Initialize clients
-        self.cohere_client = cohere.Client(COHERE_API_KEY)
-        self.qdrant_client = QdrantClient(
-            url=QDRANT_URL,
-            api_key=QDRANT_API_KEY
-        )
+        # Initialize clients lazily (only when needed)
+        self._cohere_client = None
+        self._qdrant_client = None
+        self._collection_ensured = False
 
-        # Create collection if it doesn't exist
-        self._ensure_collection()
+    @property
+    def cohere_client(self):
+        if self._cohere_client is None:
+            self._cohere_client = cohere.Client(COHERE_API_KEY)
+        return self._cohere_client
+
+    @property
+    def qdrant_client(self):
+        if self._qdrant_client is None:
+            self._qdrant_client = QdrantClient(
+                url=QDRANT_URL,
+                api_key=QDRANT_API_KEY
+            )
+            if not self._collection_ensured:
+                self._ensure_collection()
+                self._collection_ensured = True
+        return self._qdrant_client
 
     def _ensure_collection(self):
         """Create Qdrant collection if it doesn't exist"""
