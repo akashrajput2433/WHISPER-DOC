@@ -21,7 +21,7 @@ A powerful Retrieval-Augmented Generation (RAG) chatbot with a beautiful web int
 
 ## 🚀 Live Demo
 
-**Try it now:** [https://rag-ai-chatbot-0pyl.onrender.com](https://rag-ai-chatbot-0pyl.onrender.com)
+**Try it now:** [[https://rag-ai-chatbot-0pyl.onrender.com](https://rag-ai-chatbot-0pyl.onrender.com)](https://whisper-doc.onrender.com/)
 
 > Note: Free tier may take 50+ seconds to wake up after inactivity
 
