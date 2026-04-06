@@ -51,7 +51,7 @@ Bot: "Based on the uploaded document, Python's key features include:
 ### Prerequisites
 
 - Python 3.10 or higher
-- Internet connection for API calls
+- Internet connection for the API calls
 
 ### Installation
 
