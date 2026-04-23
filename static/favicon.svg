@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="blue" x1="10" y1="17" x2="30" y2="45" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7FC4DF"/>
+      <stop offset="1" stop-color="#66A8CF"/>
+    </linearGradient>
+    <linearGradient id="purple" x1="31" y1="9" x2="53" y2="31" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#BC7BE8"/>
+      <stop offset="1" stop-color="#9662D0"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="24" y1="31" x2="44" y2="56" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E9CB55"/>
+      <stop offset="1" stop-color="#D6B236"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="8" y="17" width="24" height="30" rx="11" fill="url(#blue)" transform="rotate(-1 8 17)"/>
+  <rect x="31" y="8" width="24" height="28" rx="11" fill="url(#purple)" transform="rotate(2 31 8)"/>
+  <rect x="24" y="28" width="20" height="29" rx="10" fill="url(#gold)" transform="rotate(-8 24 28)"/>
+</svg>
