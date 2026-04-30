@@ -4,6 +4,7 @@ Uses: Groq (LLM), Cohere (Embeddings), Qdrant (Vector DB)
 """
 
 import os
+import re
 from typing import List, Dict
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct
@@ -150,12 +151,40 @@ class RAGChatbot:
             for hit in results
         ]
 
-    def chat(self, query: str, use_rag: bool = True) -> Dict:
+    def _is_small_talk(self, query: str) -> bool:
+        """Detect simple greetings and conversational openers."""
+        normalized = re.sub(r'[^a-z0-9\s]', '', query.lower()).strip()
+        small_talk_queries = {
+            "hi", "hii", "hiii", "hello", "hey", "heyy", "yo",
+            "good morning", "good afternoon", "good evening",
+            "how are you", "how r u", "whats up", "what's up",
+            "sup", "thanks", "thank you"
+        }
+        return normalized in small_talk_queries
+
+    def _should_fallback_to_general(self, query: str, response: str) -> bool:
+        """Decide when auto mode should switch from RAG to general chat."""
+        normalized_response = response.lower()
+        fallback_markers = [
+            "i cannot find information about that in the uploaded documents",
+            "the context doesn't contain the answer",
+            "the context does not contain the answer",
+            "the context provided does not contain",
+            "not in the uploaded documents",
+            "not in the context above"
+        ]
+        if any(marker in normalized_response for marker in fallback_markers):
+            return True
+
+        return self._is_small_talk(query)
+
+    def chat(self, query: str, use_rag: bool = True, auto_fallback: bool = False) -> Dict:
         """Chat with RAG - retrieve context and generate response
 
         Args:
             query: User's question
             use_rag: If True, use RAG mode (search documents). If False, use general chat mode.
+            auto_fallback: If True, switch to general chat when RAG has no useful answer.
         """
         # General chat mode (no document retrieval)
         if not use_rag:
@@ -177,6 +206,8 @@ Provide a clear and helpful answer."""
         search_results = self.search(query, top_k=5)
 
         if not search_results:
+            if auto_fallback:
+                return self.chat(query, use_rag=False)
             return {
                 "answer": "I don't have enough information to answer that question. Try uploading some documents first, or switch to general chat mode.",
                 "sources": [],
@@ -210,6 +241,9 @@ Answer based ONLY on the context above. If the answer is not in the context, cle
 
         # Call Groq API
         response = self._call_groq(prompt)
+
+        if auto_fallback and self._should_fallback_to_general(query, response):
+            return self.chat(query, use_rag=False)
 
         return {
             "answer": response,

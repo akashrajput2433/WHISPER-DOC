@@ -43,15 +43,11 @@ def chat():
             return jsonify({'error': 'No query provided'}), 400
 
         # Determine which mode to use
-        use_rag = True
-        if mode == 'general':
-            use_rag = False
-        elif mode == 'auto':
-            # Auto mode: try RAG first, fallback to general if no documents
-            use_rag = True
+        use_rag = mode != 'general'
+        auto_fallback = mode == 'auto'
 
-        print(f"[INFO] Processing query in {'RAG' if use_rag else 'GENERAL'} mode: {query[:50]}...")
-        result = chatbot.chat(query, use_rag=use_rag)
+        print(f"[INFO] Processing query in {mode.upper()} mode: {query[:50]}...")
+        result = chatbot.chat(query, use_rag=use_rag, auto_fallback=auto_fallback)
         print(f"[INFO] Response generated successfully")
         return jsonify(result)
 
