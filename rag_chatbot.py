@@ -17,11 +17,27 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 COHERE_API_KEY = os.getenv("COHERE_API_KEY", "")
 QDRANT_URL = os.getenv("QDRANT_URL", "")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", "")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
+GROQ_FALLBACK_MODELS = [
+    model.strip() for model in os.getenv(
+        "GROQ_FALLBACK_MODELS",
+        "qwen/qwen3.6-27b"
+    ).split(",") if model.strip()
+]
 
 COLLECTION_NAME = "rag_documents"
 EMBEDDING_SIZE = 1024  # Cohere embed-english-v3.0
 
 class RAGChatbot:
+    def _groq_models(self) -> List[str]:
+        """Return the primary Groq model followed by unique fallbacks."""
+        models = [GROQ_MODEL, *GROQ_FALLBACK_MODELS]
+        unique_models = []
+        for model in models:
+            if model not in unique_models:
+                unique_models.append(model)
+        return unique_models
+
     def __init__(self):
         # Initialize clients lazily (only when needed)
         self._cohere_client = None
@@ -266,39 +282,60 @@ Answer based ONLY on the context above. If the answer is not in the context, cle
             "Content-Type": "application/json"
         }
 
-        data = {
-            "model": "llama-3.3-70b-versatile",
-            "messages": [
-                {"role": "user", "content": prompt}
-            ],
-            "temperature": 0.7,
-            "max_tokens": 2000
-        }
+        last_error = None
 
-        try:
-            response = requests.post(url, headers=headers, json=data, timeout=30)
+        for model_name in self._groq_models():
+            data = {
+                "model": model_name,
+                "messages": [
+                    {"role": "user", "content": prompt}
+                ],
+                "temperature": 0.7,
+                "max_tokens": 2000
+            }
 
-            # Log error details if request fails
-            if response.status_code != 200:
-                print(f"[ERROR] Groq API returned {response.status_code}")
+            try:
+                response = requests.post(url, headers=headers, json=data, timeout=30)
+
+                if response.status_code == 200:
+                    result = response.json()
+                    return result["choices"][0]["message"]["content"]
+
+                print(f"[ERROR] Groq API returned {response.status_code} for model {model_name}")
                 print(f"Response: {response.text}")
 
-                # Try to parse error message
+                error_msg = response.text
                 try:
                     error_data = response.json()
-                    error_msg = error_data.get('error', {}).get('message', response.text)
-                    raise Exception(f"Groq API Error: {error_msg}")
-                except:
-                    raise Exception(f"Groq API Error {response.status_code}: {response.text}")
+                    error_msg = error_data.get("error", {}).get("message", response.text)
+                except ValueError:
+                    pass
 
-            result = response.json()
-            return result["choices"][0]["message"]["content"]
+                if response.status_code in (400, 404) and any(
+                    marker in error_msg.lower() for marker in [
+                        "does not exist",
+                        "do not have access",
+                        "model_not_found",
+                        "blocked at the organization level"
+                    ]
+                ):
+                    last_error = f"Groq model '{model_name}' unavailable: {error_msg}"
+                    print(f"[INFO] Trying fallback model after failure on {model_name}")
+                    continue
 
-        except requests.exceptions.Timeout:
-            raise Exception("Groq API request timed out after 30 seconds")
-        except requests.exceptions.RequestException as e:
-            raise Exception(f"Groq API request failed: {str(e)}")
+                raise Exception(f"Groq API Error {response.status_code}: {error_msg}")
 
+            except requests.exceptions.Timeout:
+                raise Exception("Groq API request timed out after 30 seconds")
+            except requests.exceptions.RequestException as e:
+                raise Exception(f"Groq API request failed: {str(e)}")
+
+        if last_error:
+            raise Exception(
+                last_error + ". Update GROQ_MODEL/GROQ_FALLBACK_MODELS in your environment to currently available Groq models."
+            )
+
+        raise Exception("Groq API request failed before a model could return a response")
 
 def main():
     """Interactive CLI for RAG Chatbot"""
